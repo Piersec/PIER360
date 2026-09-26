@@ -69,7 +69,7 @@ export async function inviteTenantMember(formData: FormData) {
   try {
     const appUrl = new URL(process.env.PIER360_APP_URL);
     if (process.env.NODE_ENV === "production" && appUrl.protocol !== "https:") goWithNotice("app_url_not_configured");
-    inviteUrl = new URL("/auth/callback?next=/reset-password", appUrl).toString();
+    inviteUrl = new URL("/auth/callback", appUrl).toString();
   } catch {
     goWithNotice("app_url_not_configured");
   }
