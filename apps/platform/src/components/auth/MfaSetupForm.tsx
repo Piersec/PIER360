@@ -78,10 +78,12 @@ export function MfaSetupForm() {
         setCode("");
         return;
       }
+      const { error: activationError } = await supabase.rpc("pier360_activate_current_memberships");
+      if (activationError) throw activationError;
       router.replace("/dashboard");
       router.refresh();
     } catch {
-      setErrorMessage("Não foi possível confirmar o autenticador. Tente novamente.");
+      setErrorMessage("Não foi possível concluir a ativação após confirmar o autenticador. Tente novamente.");
     } finally {
       setSaving(false);
     }
