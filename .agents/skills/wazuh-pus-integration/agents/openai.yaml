@@ -1,0 +1,3 @@
+interface:
+  display_name: "Wazuh PUS Integration"
+  short_description: "Integrar dados do Wazuh ao PUS"

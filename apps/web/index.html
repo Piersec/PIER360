@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09111f" />
+    <meta name="description" content="PIER360 — plataforma unificada de segurança." />
+    <title>PIER360 · Plataforma Unificada de Segurança</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./src/demo-data.js"></script>
+    <script defer src="./src/app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="#overview" aria-label="PIER360, início">
+          <span class="brand-mark"><span></span><span></span><span></span></span>
+          <span class="brand-name">PIER<span>360</span></span>
+        </a>
+
+        <div class="tenant-picker">
+          <span class="tenant-avatar">P</span>
+          <span class="tenant-copy"><small>Tenant ativo</small><select id="tenantSelect" class="tenant-select" aria-label="Selecionar tenant"><option value="PierSec">PierSec</option><option value="Empresa A">Empresa A</option><option value="Empresa B">Empresa B</option></select></span>
+          <span class="tenant-chevron">⌄</span>
+        </div>
+
+        <div class="nav-label">PLATAFORMA</div>
+        <nav class="main-nav" aria-label="Navegação principal">
+          <button class="nav-item active" data-page="overview"><span class="nav-icon">◫</span><span>Visão geral</span><span class="nav-active-dot"></span></button>
+          <button class="nav-item" data-page="agents"><span class="nav-icon">▦</span><span>Ativos</span><span class="nav-count">248</span></button>
+          <button class="nav-item" data-page="vulnerabilities"><span class="nav-icon">◈</span><span>Vulnerabilidades</span><span class="nav-count alert-count">1.284</span></button>
+        </nav>
+
+        <div class="nav-label admin-nav-label">GESTÃO</div>
+        <nav class="main-nav" aria-label="Gestão da plataforma">
+          <button class="nav-item" data-page="admin"><span class="nav-icon">♙</span><span>Administração</span></button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="connection-card">
+            <span class="connection-led"></span>
+            <div><strong>Ambiente de demonstração</strong><small>Dados simulados · sem Wazuh</small></div>
+            <span class="connection-menu">•••</span>
+          </div>
+          <button class="profile-button" id="profileButton">
+            <span class="profile-avatar">DB</span>
+            <span class="profile-copy"><strong>David Basile</strong><small>Super admin</small></span>
+            <span class="profile-more">•••</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <button class="mobile-menu" id="mobileMenu" aria-label="Abrir menu">☰</button>
+          <div class="breadcrumbs"><span>PierSec</span><span class="crumb-sep">/</span><strong id="breadcrumbCurrent">Visão geral</strong></div>
+          <div class="topbar-actions">
+            <span class="environment-pill"><i></i> DEMO</span>
+            <button class="icon-button" id="helpButton" title="Ajuda" aria-label="Ajuda">?</button>
+            <button class="icon-button theme-toggle" id="themeToggle" title="Alternar tema" aria-label="Alternar tema"><span id="themeIcon">☼</span></button>
+            <span class="topbar-divider"></span>
+            <button class="top-user" id="topUser"><span class="profile-avatar small-avatar">DB</span><span>David</span><span class="tiny-chevron">⌄</span></button>
+          </div>
+        </header>
+
+        <section id="pageContent" class="page-content" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+    <div class="modal-backdrop hidden" id="modalRoot"></div>
+  </body>
+</html>
