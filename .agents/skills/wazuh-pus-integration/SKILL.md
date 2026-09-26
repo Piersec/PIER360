@@ -11,7 +11,7 @@ Use esta skill ao implementar ou revisar a integração do Wazuh com o PUS PIER3
 
 - Identifique a versão do Wazuh de cada conexão e valide o contrato contra a documentação dessa versão antes de desenvolver o conector.
 - Consulte a Wazuh Server API para agentes e inventário do Syscollector e a Wazuh Indexer API para o estado atual de vulnerabilidades. São APIs distintas, com credenciais e permissões próprias.
-- Para totais/distribuição de agentes, use `GET /agents/summary/status`; para ficha/lista, consulte `GET /agents?agents_list={agent_id}&select=id,name,ip,status,lastKeepAlive,os` (ou o filtro/rota equivalente validado na versão instalada). Trate paginação por `limit`/`offset` nas coleções; a resposta padrão é limitada.
+- Para totais/distribuição de agentes, use `GET /agents/summary` e leia `data.status`; `GET /agents/summary/status` retorna o resumo de status de conexão/sincronização, não a distribuição usada nos cartões. Para ficha/lista, consulte `GET /agents?agents_list={agent_id}&select=id,name,ip,status,lastKeepAlive,os` (ou o filtro/rota equivalente validado na versão instalada). Trate paginação por `limit`/`offset` nas coleções; a resposta padrão é limitada.
 - Para horário do último scan do inventário de software, consulte `GET /syscollector/{agent_id}/packages` conforme a documentação fornecida. As respostas atuais documentadas incluem `scan.time`; versões/contratos anteriores podem chamar o campo `scan_time`. Validar o formato, fuso e custo de paginação na versão instalada. Isso representa scan Syscollector, não scan de vulnerabilidades.
 - Preserve o status original. Para a interface, mapeie `active` para Ativo, `disconnected` para Desconectado e `pending`/`never_connected` para Pendente, com o subtipo disponível no detalhe.
 - Para leitura atual de vulnerabilidades, consulte `wazuh-states-vulnerabilities-*` na Indexer API no servidor/backend em cada requisição autorizada. Não use uma projeção periódica como fonte de leitura padrão nem baseie uma integração nova nos antigos endpoints `/vulnerability`; foram removidos/depreciados a partir do Wazuh 4.8. Confirme o esquema real do cluster antes de definir mapeamentos.
@@ -29,3 +29,4 @@ Use esta skill ao implementar ou revisar a integração do Wazuh com o PUS PIER3
 - Registre metadados mínimos das consultas em tempo real e reporte latência/erro da origem. Não substitua falha por zeros nem apresente cópia antiga como estado atual sem identificá-la.
 
 Leia [references/wazuh-data-contracts.md](references/wazuh-data-contracts.md) para endpoints, status, índices e ligações oficiais relevantes. Leia apenas as seções necessárias para a tarefa.
+

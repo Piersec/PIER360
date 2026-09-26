@@ -59,9 +59,16 @@ O protótipo já cobre navegação, dashboard, lista/ficha de ativos, gestão de
 5. **UI/UX sobre dados reais:** com os contratos estabilizados, observar analistas usando staging. Rever densidade e leitura da fila sem rolagem horizontal, clareza de filtros/contagens, estados vazios e de erro, responsividade, contraste, teclado/leitor de tela. Priorizar correções antes do UAT, sem expandir o escopo funcional por conveniência visual.
 6. **QA, UAT e produção:** executar regressão funcional, isolamento tenant/módulo, segurança, reconciliação com Wazuh, backup/restore e observabilidade; fazer piloto limitado após aceite. Só então avaliar go-live.
 
-O detalhamento executável da fase 2, com subfases, gates, matriz de autorização e dependências atuais, está em [Fase 2 — Fundação do backend](./fase-2-fundacao-backend.md). O DEV tem seis migrations aplicadas; o app server-side já compila com login, recuperação, TOTP, convite/gestão de acessos por tenant e consulta de auditoria. Próximo gate: configurar Turnstile/Auth e Vercel, provisionar o primeiro Super Admin e executar QA de Auth/RLS; só então liberar a integração Wazuh.
+O detalhamento executável da fase 2, com subfases, gates, matriz de autorização e dependências atuais, está em [Fase 2 — Fundação do backend](./fase-2-fundacao-backend.md). No DEV, o tenant Piersec e o primeiro Super Admin foram provisionados; o convite foi concluído definindo senha e MFA, e o usuário confirmou o primeiro acesso AAL2. Supabase Auth, Turnstile e permissões administrativas estão configurados no Preview. As oito migrations esperadas constam no banco DEV.
 
-**Gate para avançar agora:** aprovar a fórmula, os rótulos e o escopo; iniciar backend/Auth/tenancy em ambiente de desenvolvimento; manter somente fixtures até os controles de acesso e o Gate A estarem aprovados, antes de consultar Wazuh real.
+**Estado em 2026-09-26:** o bootstrap e o primeiro login foram concluídos. O Gate 2.8 ainda requer a evidência dos casos negativos de autorização/RLS e a revisão de dois avisos do Security Advisor antes do gate de produção: execução autenticada da rotina de concessão multi-tenant (protegida por verificação de super admin) e proteção contra senhas vazadas desabilitada. O projeto DEV não tem conexão Wazuh cadastrada. A fase seguinte começa pelo contrato e pelo conector server-side de leitura; consultas reais só serão ativadas depois de disponibilizar gateway, versão do Wazuh e credenciais read-only. Não publicar em Production nesta etapa.
+
+### Execução atual da fase 3 — agentes
+
+1. **Contrato e segurança:** concluída a correção do endpoint de contagens (`GET /agents/summary`) e documentado o contrato BFF↔gateway em [`wazuh-gateway-contract-v1.md`](./wazuh-gateway-contract-v1.md). `GET /agents/summary/status` não será usado para as métricas dos cartões.
+2. **Data binding dos ativos:** implementados no app server-side a distribuição, listagem paginada e ficha do agente, com autorização AAL2 por tenant; a criticidade é um overlay binário auditado no PUS. `npm run typecheck:platform` e `npm run build:platform` passaram no workspace.
+3. **Conexão real em DEV:** pendente provisionar o gateway HTTPS, cadastrar a conexão Manager read-only e confirmar versão/contrato instalado. Sem isso, a tela mostra “não configurada” e não simula dados.
+4. **Gate de dados reais:** após conectividade, reconciliar estados, paginação, `lastKeepAlive` e `scan.time`/`scan_time` com uma instância não produtiva; só então passar para Indexer/States e enriquecimento EPSS/KEV.
 
 ## Plano de testes por fase
 
@@ -106,3 +113,4 @@ Para evitar reestruturação, a lógica de negócio e as regras de autorização
 - [Plano de testes](./plano-de-testes.md)
 - [Plano de produção](./plano-de-producao.md)
 - [Skill interna de integração Wazuh](../.agents/skills/wazuh-pus-integration/SKILL.md)
+

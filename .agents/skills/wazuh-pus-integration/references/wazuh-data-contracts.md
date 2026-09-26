@@ -5,7 +5,7 @@ Referência enxuta para implementação; não substitui a documentação da vers
 ## Agentes
 
 - Manager API: [referência da API](https://documentation.wazuh.com/current/user-manual/api/reference.html) e [listar agentes](https://documentation.wazuh.com/current/user-manual/agent/agent-management/listing/listing.html).
-- `GET /agents/summary/status` retorna contagens por conexão (`active`, `disconnected`, `pending`, `never_connected` e `total`) para cartões/status. Para um agente, o PDF fornecido exemplifica `GET /agents?agents_list={agent_id}&select=id,name,ip,status,lastKeepAlive,os`; valide filtros e campos com a versão instalada. A API oferece `limit`, `offset` e `select`; respostas de coleção são limitadas por padrão e devem ser paginadas.
+- `GET /agents/summary` retorna contagens em `data.status` (`active`, `disconnected`, `pending`, `never_connected`); derive o total da soma dos estados retornados. `GET /agents/summary/status` é outro endpoint, voltado aos estados de conexão e sincronização. Para um agente, o PDF fornecido exemplifica `GET /agents?agents_list={agent_id}&select=id,name,ip,status,lastKeepAlive,os`; valide filtros e campos com a versão instalada. A API oferece `limit`, `offset` e `select`; respostas de coleção são limitadas por padrão e devem ser paginadas.
 - Os estados da API incluem `active`, `pending`, `never_connected` e `disconnected`. A tela da V1 tem três grupos; agrupe `pending` e `never_connected` em Pendente e preserve o valor de origem para auditoria/detalhe.
 - `lastKeepAlive` é a base para “último contato”. Wazuh também documenta dados estatísticos por agente em `/agents/{agent_id}/stats/agent`, incluindo `last_keepalive` e `last_ack`.
 - Para inventário do ativo, o Manager API expõe `GET /syscollector/{agent_id}/packages`. A documentação fornecida menciona `scan_time`; os exemplos atuais da API mostram `scan: { id, time }` em cada registro. Normalizar ambos somente após validar contrato/versão; o timestamp é o scan do Syscollector (inventário de software), não o último contato nem necessariamente o scan de vulnerabilidades. A coleção usa paginação e o campo de scan deve ser escolhido sem baixar pacotes completos se o contrato instalado permitir seleção/ordenação segura.
@@ -66,3 +66,4 @@ source_query_run (metadados operacionais, sem cópia do finding):
 ```
 
 Guarde a identificação da origem e timestamps de consulta. Vulnerabilidades são lidas do Indexer; persista somente overlay operacional, auditoria e métricas de execução. Inclua payload bruto somente se houver requisito de troubleshooting, retenção e acesso definido.
+
