@@ -14,6 +14,7 @@ export default async function DashboardPage() {
   if (adminCheckError) redirect("/access-denied");
 
   const assetTenants = await listAccessibleTenants(supabase, userId, "assets").catch(() => []);
+  const vulnerabilityTenants = await listAccessibleTenants(supabase, userId, "vulnerabilities").catch(() => []);
 
   if (!isSuperAdmin) {
     const { data: grants, error: grantsError } = await supabase
@@ -39,6 +40,7 @@ export default async function DashboardPage() {
         <Brand />
         <div className="admin-top-actions">
           {assetTenants.length ? <Link className="text-link" href={`/assets?tenant=${assetTenants[0].id}`}>Ativos</Link> : null}
+          {vulnerabilityTenants.length ? <Link className="text-link" href={`/vulnerabilities?tenant=${vulnerabilityTenants[0].id}`}>Vulnerabilidades</Link> : null}
           {isSuperAdmin ? <Link className="text-link" href="/admin/users">Administração de usuários</Link> : null}
           <div className="account-chip">{email}</div>
         </div>
@@ -60,4 +62,3 @@ export default async function DashboardPage() {
     </main>
   );
 }
-

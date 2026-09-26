@@ -63,12 +63,13 @@ O detalhamento executável da fase 2, com subfases, gates, matriz de autorizaç�
 
 **Estado em 2026-09-26:** o bootstrap e o primeiro login foram concluídos. O Gate 2.8 ainda requer a evidência dos casos negativos de autorização/RLS e a revisão de dois avisos do Security Advisor antes do gate de produção: execução autenticada da rotina de concessão multi-tenant (protegida por verificação de super admin) e proteção contra senhas vazadas desabilitada. O projeto DEV não tem conexão Wazuh cadastrada. A fase seguinte começa pelo contrato e pelo conector server-side de leitura; consultas reais só serão ativadas depois de disponibilizar gateway, versão do Wazuh e credenciais read-only. Não publicar em Production nesta etapa.
 
-### Execução atual da fase 3 — agentes
+### Execução atual — integração Wazuh (fases 3 e 8)
 
 1. **Contrato e segurança:** concluída a correção do endpoint de contagens (`GET /agents/summary`) e documentado o contrato BFF↔gateway em [`wazuh-gateway-contract-v1.md`](./wazuh-gateway-contract-v1.md). `GET /agents/summary/status` não será usado para as métricas dos cartões.
 2. **Data binding dos ativos:** implementados no app server-side a distribuição, listagem paginada e ficha do agente, com autorização AAL2 por tenant; a criticidade é um overlay binário auditado no PUS. `npm run typecheck:platform` e `npm run build:platform` passaram no workspace.
-3. **Conexão real em DEV:** pendente provisionar o gateway HTTPS, cadastrar a conexão Manager read-only e confirmar versão/contrato instalado. Sem isso, a tela mostra “não configurada” e não simula dados.
-4. **Gate de dados reais:** após conectividade, reconciliar estados, paginação, `lastKeepAlive` e `scan.time`/`scan_time` com uma instância não produtiva; só então passar para Indexer/States e enriquecimento EPSS/KEV.
+3. **Data binding de vulnerabilidades:** adicionados serviço server-side e tela de vulnerabilidades que consultam resumo por severidade e lista paginada do índice States através do gateway tipado. A tela exige AAL2/grant por tenant, associa overlay do workflow PUS por `findingKey` e distingue estado indisponível de zero. `npm run typecheck:platform` e `npm run build:platform` passaram no workspace.
+4. **Conexão real em DEV:** pendente provisionar o gateway HTTPS, cadastrar a conexão read-only e confirmar versão/contrato Manager/Indexer, mappings do States e identidade estável do documento. Sem isso, as telas mostram “não configurada” e não simulam dados.
+5. **Gate de dados reais:** após conectividade, reconciliar estados, paginação, `lastKeepAlive`, `scan.time`/`scan_time`, contagens por severidade, filtros e identidade agente+CVE+pacote com uma instância não produtiva. EPSS/KEV e a ordenação KEV → EPSS permanecem para a fase de enriquecimento.
 
 ## Plano de testes por fase
 
@@ -113,4 +114,3 @@ Para evitar reestruturação, a lógica de negócio e as regras de autorização
 - [Plano de testes](./plano-de-testes.md)
 - [Plano de produção](./plano-de-producao.md)
 - [Skill interna de integração Wazuh](../.agents/skills/wazuh-pus-integration/SKILL.md)
-

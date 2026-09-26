@@ -77,7 +77,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
         <nav className="assets-nav" aria-label="Navegação principal">
           <Link href="/dashboard">Visão geral</Link>
           <Link aria-current="page" className="active" href={`/assets?tenant=${tenant.id}`}>Ativos</Link>
-          <span aria-disabled="true">Vulnerabilidades</span>
+          <Link href={`/vulnerabilities?tenant=${tenant.id}`}>Vulnerabilidades</Link>
         </nav>
         <div className="account-chip">{typeof claims.email === "string" ? claims.email : "Sessão autenticada"}</div>
       </header>
@@ -232,4 +232,3 @@ function describeWazuhError(error: unknown) {
     case "source_incomplete": return "A resposta do Wazuh veio parcial e não pode ser tratada como inventário completo.";
   }
 }
-
