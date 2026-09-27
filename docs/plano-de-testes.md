@@ -25,7 +25,7 @@ Este é o plano a executar durante o desenvolvimento e antes do go-live. O prot�
 
 ## Casos de aceite prioritários
 
-1. Reconciliar total e distribuição usando `GET /agents/summary/status`; conferir `pending` e `never_connected` no grupo Pendente e detalhamento original.
+1. Reconciliar total e distribuição usando `GET /agents/summary`; conferir `pending` e `never_connected` no grupo Pendente e detalhamento original. `GET /agents/summary/status` é um endpoint diferente e não alimenta esses cartões.
 2. Confirmar que IP/status/`lastKeepAlive` pertencem ao agente correto. Comparar timestamp de scan retornado por `/syscollector/{agent_id}/packages` com `scan.time` ou `scan_time` no payload real e garantir que o rótulo/fuso seja inequívoco.
 3. Marcar e desmarcar um agente como crítico; confirmar persistência após recarga, isolamento por tenant/conexão, atualização da classificação na lista/ficha e tabela de ativos impactados, e score de risco inalterado.
 4. Validar a regra: KEV sempre precede EPSS; itens sem KEV com EPSS igual ao corte entram na faixa destacada; abaixo do corte permanecem na lista; sem EPSS ficam pendentes, sem converter ausência em zero. Confirmar a mesma ordem no dashboard, lista, detalhe e filtro de ativos.

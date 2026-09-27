@@ -57,10 +57,12 @@ export function MfaChallengeForm() {
         setCode("");
         return;
       }
+      const { error: activationError } = await supabase.rpc("pier360_activate_current_memberships");
+      if (activationError) throw activationError;
       router.replace("/dashboard");
       router.refresh();
     } catch {
-      setErrorMessage("Não foi possível validar o código. Tente novamente.");
+      setErrorMessage("Não foi possível concluir a ativação após validar o código. Tente novamente.");
     } finally {
       setLoading(false);
     }
