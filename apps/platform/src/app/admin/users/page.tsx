@@ -4,7 +4,7 @@ import { Brand } from "@/components/Brand";
 import { AuthorizationError, requirePlatformSuperAdmin } from "@/lib/auth/authorization";
 import { createAdminClient, hasSupabaseAdminConfig } from "@/lib/supabase/admin";
 import type { User } from "@supabase/supabase-js";
-import { inviteTenantMember, updateTenantMemberAccess } from "./actions";
+import { grantAdditionalTenantAccess, inviteTenantMember, updateTenantMemberAccess } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +17,13 @@ const moduleOptions = [
 const notices: Record<string, string> = {
   invite_sent: "Convite enviado. O acesso será ativado quando a pessoa confirmar o e-mail.",
   member_access_updated: "Acesso atualizado e registrado na auditoria.",
+  tenant_access_granted: "Acesso aos tenants selecionados concedido sem alterar os vínculos existentes. A alteração foi registrada na auditoria.",
   app_url_not_configured: "Configure PIER360_APP_URL e adicione a URL de callback à lista permitida do Supabase Auth.",
   admin_api_not_configured: "Configure SUPABASE_SECRET_KEY somente como variável de ambiente server-side para habilitar convites e consulta de usuários.",
   invalid_email: "Informe um e-mail válido.",
   invalid_full_name: "Informe um nome entre 1 e 160 caracteres.",
   invalid_tenant_id: "Selecione um tenant ativo.",
+  invalid_tenant_ids: "Selecione ao menos um tenant ativo, sem duplicações.",
   invalid_role: "O papel informado não é válido.",
   invalid_capability: "O nível de acesso informado não é válido.",
   invalid_module_access: "Revise as telas selecionadas.",
@@ -30,6 +32,8 @@ const notices: Record<string, string> = {
   member_access_rejected: "O acesso não foi alterado. Confirme o e-mail do usuário e revise tenant, papel e telas.",
   email_not_confirmed: "A conta ainda não confirmou o e-mail. O acesso ativo exige confirmação do convite.",
   member_access_update_failed: "Não foi possível atualizar o acesso.",
+  tenant_access_rejected: "O acesso não foi concedido. Revise se todos os tenants estão ativos e se o perfil do usuário está habilitado.",
+  tenant_access_grant_failed: "Não foi possível adicionar o acesso aos tenants selecionados.",
   member_provision_failed: "O convite não foi associado ao tenant. A criação foi revertida ou precisa de revisão operacional.",
   invite_failed: "Não foi possível concluir o convite. Verifique se o e-mail já possui conta e a configuração de Auth.",
 };
@@ -49,8 +53,8 @@ export default async function AdminUsersPage({
   const { data: tenantRows, error: tenantsError } = await supabase
     .from("tenants")
     .select("id, name, status")
-    .eq("status", "active")
     .order("name");
+  const activeTenantRows = (tenantRows ?? []).filter((tenant) => tenant.status === "active");
   const { data: auditRows, error: auditError } = await supabase
     .from("audit_log")
     .select("id, actor_user_id, event_type, target_table, target_key, tenant_id, created_at")
@@ -99,13 +103,22 @@ export default async function AdminUsersPage({
     grants.set(key, current);
   }
 
-  const memberRows = (membershipsResult.data ?? []).map((membership) => ({
-    membership,
-    tenant: tenants.get(membership.tenant_id),
-    profile: profiles.get(membership.user_id),
-    authUser: authUsers.find((user) => user.id === membership.user_id),
-    moduleGrants: grants.get(`${membership.tenant_id}:${membership.user_id}`) ?? new Map<string, string>(),
-  }));
+  const userRows = authUsers.map((authUser) => {
+    const memberships = (membershipsResult.data ?? [])
+      .filter((membership) => membership.user_id === authUser.id)
+      .map((membership) => ({
+        membership,
+        tenant: tenants.get(membership.tenant_id),
+        moduleGrants: grants.get(`${membership.tenant_id}:${membership.user_id}`) ?? new Map<string, string>(),
+      }));
+    const existingTenantIds = new Set(memberships.map(({ membership }) => membership.tenant_id));
+    return {
+      authUser,
+      profile: profiles.get(authUser.id),
+      memberships,
+      availableTenants: activeTenantRows.filter((tenant) => !existingTenantIds.has(tenant.id)),
+    };
+  });
 
   return (
     <main className="dashboard-shell admin-shell">
@@ -122,9 +135,9 @@ export default async function AdminUsersPage({
       <section className="admin-content">
         <p className="eyebrow">Administração global · Super Admin</p>
         <h1>Usuários e acessos</h1>
-        <p className="intro">Convide pessoas para um tenant e controle quais áreas da plataforma cada perfil pode acessar.</p>
+        <p className="intro">Associe cada pessoa a um ou mais tenants e controle, separadamente, quais áreas e operações ficam disponíveis em cada vínculo.</p>
 
-        {noticeKey && notices[noticeKey] ? <p className={noticeKey === "invite_sent" || noticeKey === "member_access_updated" ? "notice" : "alert"} role="status">{notices[noticeKey]}</p> : null}
+        {noticeKey && notices[noticeKey] ? <p className={noticeKey === "invite_sent" || noticeKey === "member_access_updated" || noticeKey === "tenant_access_granted" ? "notice" : "alert"} role="status">{notices[noticeKey]}</p> : null}
         {loadError ? <p className="alert" role="alert">{loadError}</p> : null}
 
         <section className="admin-panel" aria-labelledby="invite-heading">
@@ -145,13 +158,6 @@ export default async function AdminUsersPage({
                 <input name="email" type="email" autoComplete="email" maxLength={254} required />
               </label>
               <label className="field">
-                <span>Tenant</span>
-                <select name="tenant_id" required defaultValue="">
-                  <option value="" disabled>Selecione um tenant ativo</option>
-                  {(tenantRows ?? []).map((tenant) => <option value={tenant.id} key={tenant.id}>{tenant.name}</option>)}
-                </select>
-              </label>
-              <label className="field">
                 <span>Papel operacional</span>
                 <select name="role" defaultValue="reader">
                   <option value="reader">Leitor</option>
@@ -160,6 +166,21 @@ export default async function AdminUsersPage({
                 </select>
               </label>
             </div>
+
+            <fieldset className="tenant-access">
+              <legend>Tenants com acesso</legend>
+              <p className="field-help">Selecione um ou mais tenants ativos para este novo usuário.</p>
+              {activeTenantRows.length ? (
+                <div className="tenant-options">
+                  {activeTenantRows.map((tenant) => (
+                    <label className="tenant-option" key={tenant.id}>
+                      <input name="tenant_ids" type="checkbox" value={tenant.id} />
+                      <span>{tenant.name}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : <p className="empty-state">Não há tenants ativos para selecionar.</p>}
+            </fieldset>
 
             <fieldset className="module-access">
               <legend>Telas habilitadas</legend>
@@ -180,7 +201,7 @@ export default async function AdminUsersPage({
               </select>
             </label>
             <div className="form-submit-row">
-              <button className="primary-button" type="submit" disabled={!tenantRows?.length}>Enviar convite</button>
+              <button className="primary-button" type="submit" disabled={!activeTenantRows.length}>Enviar convite</button>
             </div>
           </form>
         </section>
@@ -191,72 +212,142 @@ export default async function AdminUsersPage({
               <p className="eyebrow">Acessos existentes</p>
               <h2 id="members-heading">Membros por tenant</h2>
             </div>
-            <span className="admin-count">Página {currentPage} · {memberRows.length} vínculos</span>
+            <span className="admin-count">Página {currentPage} · {userRows.length} usuários</span>
           </div>
-          {memberRows.length ? (
+          {userRows.length ? (
             <div className="member-list">
-              {memberRows.map(({ membership, tenant, profile, authUser, moduleGrants }) => (
-                <details className="member-card" key={`${membership.tenant_id}:${membership.user_id}`}>
-                  <summary>
-                    <span className="member-primary">
-                      <strong>{profile?.full_name || authUser?.email || membership.user_id}</strong>
-                      <small>{authUser?.email ?? "E-mail indisponível"} · {tenant?.name ?? "Tenant indisponível"}</small>
-                    </span>
-                    <span className={`status-pill status-${membership.status}`}>{membership.status === "active" ? "Ativo" : membership.status === "disabled" ? "Desativado" : "Convite pendente"}</span>
-                    <span className="member-module-summary">{moduleGrants.size ? [...moduleGrants].map(([key, capability]) => `${moduleLabel(key)}${capability === "manage" ? " (gerencia)" : ""}`).join(" · ") : "Sem telas habilitadas"}</span>
-                  </summary>
-                  <form action={updateTenantMemberAccess} className="member-edit-form">
-                    <input type="hidden" name="user_id" value={membership.user_id} />
-                    <input type="hidden" name="tenant_id" value={membership.tenant_id} />
-                    <div className="admin-form-grid">
-                      <label className="field">
-                        <span>Nome</span>
-                        <input name="full_name" defaultValue={profile?.full_name ?? ""} maxLength={160} required />
-                      </label>
-                      <label className="field">
-                        <span>Papel operacional</span>
-                        <select name="role" defaultValue={membership.role}>
-                          <option value="reader">Leitor</option>
-                          <option value="analyst">Analista</option>
-                          <option value="tenant_admin">Administrador do tenant</option>
-                        </select>
-                      </label>
-                      <label className="field">
-                        <span>Status do acesso</span>
-                        <select name="status" defaultValue={membership.status}>
-                          {membership.status === "invited" ? <option value="invited">Convite pendente</option> : null}
-                          <option value="active">Ativo</option>
-                          <option value="disabled">Desativado</option>
-                        </select>
-                      </label>
+              {userRows.map(({ authUser, profile, memberships, availableTenants }) => {
+                const statuses = memberships.map(({ membership }) => membership.status);
+                const userStatus = statuses.includes("active") ? "active" : statuses.includes("invited") ? "invited" : "disabled";
+                const tenantNames = memberships.map(({ tenant }) => tenant?.name ?? "Tenant indisponível");
+                const accessSummary = memberships.length
+                  ? memberships.map(({ tenant, moduleGrants }) => `${tenant?.name ?? "Tenant"}: ${moduleGrants.size ? [...moduleGrants].map(([key, capability]) => `${moduleLabel(key)}${capability === "manage" ? " (gerencia)" : ""}`).join(", ") : "sem telas"}`).join(" · ")
+                  : "Sem tenants associados";
+
+                return (
+                  <details className="member-card" key={authUser.id}>
+                    <summary>
+                      <span className="member-primary">
+                        <strong>{profile?.full_name || authUser.email || authUser.id}</strong>
+                        <small>{authUser.email ?? "E-mail indisponível"} · {tenantNames.length ? tenantNames.join(", ") : "Sem tenants"}</small>
+                      </span>
+                      <span className={`status-pill status-${userStatus}`}>{memberships.length ? (userStatus === "active" ? "Ativo" : userStatus === "disabled" ? "Desativado" : "Convite pendente") : "Sem tenants"}</span>
+                      <span className="member-module-summary">{accessSummary}</span>
+                    </summary>
+                    <div className="member-tenant-list">
+                      {memberships.map(({ membership, tenant, moduleGrants }) => (
+                        <section className="member-tenant-entry" key={`${membership.tenant_id}:${membership.user_id}`}>
+                          <div className="member-tenant-heading">
+                            <h3>{tenant?.name ?? "Tenant indisponível"}</h3>
+                            <span className={`status-pill status-${membership.status}`}>{membership.status === "active" ? "Ativo" : membership.status === "disabled" ? "Desativado" : "Convite pendente"}</span>
+                          </div>
+                          <form action={updateTenantMemberAccess} className="member-edit-form">
+                            <input type="hidden" name="user_id" value={membership.user_id} />
+                            <input type="hidden" name="tenant_id" value={membership.tenant_id} />
+                            <div className="admin-form-grid">
+                              <label className="field">
+                                <span>Nome</span>
+                                <input name="full_name" defaultValue={profile?.full_name ?? ""} maxLength={160} required />
+                              </label>
+                              <label className="field">
+                                <span>Papel operacional</span>
+                                <select name="role" defaultValue={membership.role}>
+                                  <option value="reader">Leitor</option>
+                                  <option value="analyst">Analista</option>
+                                  <option value="tenant_admin">Administrador do tenant</option>
+                                </select>
+                              </label>
+                              <label className="field">
+                                <span>Status do acesso</span>
+                                <select name="status" defaultValue={membership.status}>
+                                  {membership.status === "invited" ? <option value="invited">Convite pendente</option> : null}
+                                  <option value="active">Ativo</option>
+                                  <option value="disabled">Desativado</option>
+                                </select>
+                              </label>
+                            </div>
+                            <fieldset className="module-access">
+                              <legend>Telas habilitadas para {tenant?.name ?? "este tenant"}</legend>
+                              <div className="module-options">
+                                {moduleOptions.map((module) => (
+                                  <label className="module-option" key={module.key}>
+                                    <input name="module_keys" type="checkbox" value={module.key} defaultChecked={moduleGrants.has(module.key)} />
+                                    <span>{module.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </fieldset>
+                            <label className="field access-level">
+                              <span>Permissão nas telas selecionadas</span>
+                              <select name="capability" defaultValue={new Set(moduleGrants.values()).size === 1 ? [...moduleGrants.values()][0] : "read"}>
+                                <option value="read">Visualizar</option>
+                                <option value="manage">Visualizar e gerenciar</option>
+                              </select>
+                            </label>
+                            <div className="form-submit-row">
+                              <button className="secondary-button" type="submit">Salvar permissões</button>
+                            </div>
+                          </form>
+                        </section>
+                      ))}
+                      <section className="add-tenant-access">
+                        <h3>Conceder acesso a outros tenants</h3>
+                        <p className="field-help">Os vínculos atuais serão preservados. Configure o novo acesso por tenant.</p>
+                        {availableTenants.length ? (
+                          <form action={grantAdditionalTenantAccess} className="admin-form">
+                            <input type="hidden" name="user_id" value={authUser.id} />
+                            <fieldset className="tenant-access">
+                              <legend>Novos tenants</legend>
+                              <div className="tenant-options">
+                                {availableTenants.map((tenant) => (
+                                  <label className="tenant-option" key={tenant.id}>
+                                    <input name="tenant_ids" type="checkbox" value={tenant.id} />
+                                    <span>{tenant.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </fieldset>
+                            <div className="admin-form-grid">
+                              <label className="field">
+                                <span>Papel operacional nos novos tenants</span>
+                                <select name="role" defaultValue="reader">
+                                  <option value="reader">Leitor</option>
+                                  <option value="analyst">Analista</option>
+                                  <option value="tenant_admin">Administrador do tenant</option>
+                                </select>
+                              </label>
+                              <label className="field">
+                                <span>Permissão nas telas selecionadas</span>
+                                <select name="capability" defaultValue="read">
+                                  <option value="read">Visualizar</option>
+                                  <option value="manage">Visualizar e gerenciar</option>
+                                </select>
+                              </label>
+                            </div>
+                            <fieldset className="module-access">
+                              <legend>Telas nos novos tenants</legend>
+                              <div className="module-options">
+                                {moduleOptions.map((module) => (
+                                  <label className="module-option" key={module.key}>
+                                    <input name="module_keys" type="checkbox" value={module.key} />
+                                    <span>{module.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </fieldset>
+                            <div className="form-submit-row">
+                              <button className="secondary-button" type="submit">Adicionar tenants selecionados</button>
+                            </div>
+                          </form>
+                        ) : <p className="empty-state">Este usuário já possui vínculo com todos os tenants ativos.</p>}
+                      </section>
                     </div>
-                    <fieldset className="module-access">
-                      <legend>Telas habilitadas</legend>
-                      <div className="module-options">
-                        {moduleOptions.map((module) => (
-                          <label className="module-option" key={module.key}>
-                            <input name="module_keys" type="checkbox" value={module.key} defaultChecked={moduleGrants.has(module.key)} />
-                            <span>{module.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </fieldset>
-                    <label className="field access-level">
-                      <span>Permissão nas telas selecionadas</span>
-                      <select name="capability" defaultValue={new Set(moduleGrants.values()).size === 1 ? [...moduleGrants.values()][0] : "read"}>
-                        <option value="read">Visualizar</option>
-                        <option value="manage">Visualizar e gerenciar</option>
-                      </select>
-                    </label>
-                    <div className="form-submit-row">
-                      <button className="secondary-button" type="submit">Salvar permissões</button>
-                    </div>
-                  </form>
-                </details>
-              ))}
+                  </details>
+                );
+              })}
             </div>
           ) : (
-            <p className="empty-state">Nenhum vínculo de tenant cadastrado ainda.</p>
+            <p className="empty-state">Nenhum usuário do Supabase Auth encontrado nesta página.</p>
           )}
           {hasSupabaseAdminConfig() ? (
             <div className="member-pagination" aria-label="Paginação dos usuários">

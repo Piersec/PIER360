@@ -5,7 +5,8 @@
   "scripts": {
     "dev:platform": "npm run dev --workspace @pier360/platform",
     "build:platform": "npm run build --workspace @pier360/platform",
-    "typecheck:platform": "npm run typecheck --workspace @pier360/platform"
+    "typecheck:platform": "npm run typecheck --workspace @pier360/platform",
+    "test:gateway": "node --test services/wazuh-gateway/*.test.mjs"
   },
   "devDependencies": {
     "supabase": "2.117.0"

@@ -1,0 +1,68 @@
+services:
+  wazuh-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pier360-wazuh-gateway:dev
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    expose:
+      - "8787"
+    environment:
+      PORT: "8787"
+      WAZUH_CONNECTION_KEY: ${WAZUH_CONNECTION_KEY:-piersec-dev}
+      WAZUH_MANAGER_URL: ${WAZUH_MANAGER_URL:?Set WAZUH_MANAGER_URL}
+      WAZUH_MANAGER_USERNAME_FILE: /run/secrets/wazuh_manager_username
+      WAZUH_MANAGER_PASSWORD_FILE: /run/secrets/wazuh_manager_password
+      WAZUH_INDEXER_URL: ${WAZUH_INDEXER_URL:?Set WAZUH_INDEXER_URL}
+      WAZUH_INDEXER_USERNAME_FILE: /run/secrets/wazuh_indexer_username
+      WAZUH_INDEXER_PASSWORD_FILE: /run/secrets/wazuh_indexer_password
+      WAZUH_GATEWAY_SERVICE_TOKEN_FILE: /run/secrets/wazuh_gateway_service_token
+      WAZUH_MANAGER_CA_FILE: /run/secrets/wazuh_manager_ca.crt
+      WAZUH_INDEXER_CA_FILE: /run/secrets/wazuh_indexer_ca.crt
+    volumes:
+      - type: bind
+        source: ${WAZUH_MANAGER_USERNAME_FILE:?Set the host path to the read-only Manager username file}
+        target: /run/secrets/wazuh_manager_username
+        read_only: true
+      - type: bind
+        source: ${WAZUH_MANAGER_PASSWORD_FILE:?Set the host path to the read-only Manager password file}
+        target: /run/secrets/wazuh_manager_password
+        read_only: true
+      - type: bind
+        source: ${WAZUH_INDEXER_USERNAME_FILE:?Set the host path to the read-only Indexer username file}
+        target: /run/secrets/wazuh_indexer_username
+        read_only: true
+      - type: bind
+        source: ${WAZUH_INDEXER_PASSWORD_FILE:?Set the host path to the read-only Indexer password file}
+        target: /run/secrets/wazuh_indexer_password
+        read_only: true
+      - type: bind
+        source: ${WAZUH_GATEWAY_SERVICE_TOKEN_FILE:?Set the host path to the gateway bearer token file}
+        target: /run/secrets/wazuh_gateway_service_token
+        read_only: true
+      - type: bind
+        source: ${WAZUH_MANAGER_CA_HOST_FILE:?Set the host path to the Manager CA PEM file}
+        target: /run/secrets/wazuh_manager_ca.crt
+        read_only: true
+      - type: bind
+        source: ${WAZUH_INDEXER_CA_HOST_FILE:?Set the host path to the Indexer CA PEM file}
+        target: /run/secrets/wazuh_indexer_ca.crt
+        read_only: true
+    networks:
+      - wazuh-manager
+      - cloudflared
+
+networks:
+  wazuh-manager:
+    external: true
+    name: ${WAZUH_MANAGER_DOCKER_NETWORK:?Set the existing Docker network containing the Wazuh Manager}
+  cloudflared:
+    external: true
+    name: ${CLOUDFLARED_DOCKER_NETWORK:?Set the existing Docker network containing the Cloudflare Tunnel connector}
