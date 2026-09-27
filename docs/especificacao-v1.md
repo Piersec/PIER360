@@ -19,7 +19,7 @@ Alertas gerais e investigação SIEM, Hardening/CIS, módulos de CTI próprios, 
 
 ## Regras de domínio essenciais
 
-- **Agent:** obter distribuição em `GET /agents/summary/status`; normalizar `active` → Ativo, `disconnected` → Desconectado e `pending`/`never_connected` → Pendente. Preservar status fonte.
+- **Agent:** obter distribuição em `GET /agents/summary` (`data.status`); normalizar `active` → Ativo, `disconnected` → Desconectado e `pending`/`never_connected` → Pendente. Preservar status fonte. `GET /agents/summary/status` não alimenta os cartões de distribuição.
 - **Criticidade operacional do ativo:** é um campo booleano do PUS, separado do documento Wazuh e dos scores de risco. Na integração, persistir por tenant/conexão/agent e auditar alterações autorizadas. A marcação aparece na lista/ficha de ativos e como contexto na tabela de ativos impactados; não altera métricas de priorização nem soma pontos ao risco calculado.
 - **Prioridade de vulnerabilidades:** usar um único classificador compartilhado por dashboard, lista, filtros, ficha e ativos. Vulnerabilidade no KEV vem primeiro, mesmo com EPSS baixo; as demais são ordenadas pelo EPSS válido em ordem decrescente. A partir do corte do tenant (padrão 8,8%, inclusivo), destacar EPSS alto; abaixo do corte, manter a vulnerabilidade na fila; sem EPSS válido, marcar como pendente. A interface usa os critérios descritivos “KEV ativo”, “EPSS ≥ corte” e “KEV ativo + EPSS ≥ corte”, sem códigos de prioridade sequenciais. Não somar pesos de CVSS, severidade ou criticidade do ativo a esse cálculo.
 - **Ligação de dados:** cada tela consome modelos de leitura do adaptador, que deriva métricas e filtros dos mesmos registros e da configuração do tenant. A integração move essa agregação para o BFF/server-side; a UI não mantém cópias independentes de métricas nem recalcula regras diferentes por página.
@@ -33,7 +33,7 @@ Alertas gerais e investigação SIEM, Hardening/CIS, módulos de CTI próprios, 
 
 ## Critérios de aceite
 
-- Os totais de `GET /agents/summary/status` fecham com a resposta da origem; `pending` e `never_connected` aparecem no grupo Pendente sem perder distinção no dado fonte.
+- Os totais de `GET /agents/summary` fecham com a resposta da origem; `pending` e `never_connected` aparecem no grupo Pendente sem perder distinção no dado fonte.
 - A ficha exibe nome, IP, último contato (`lastKeepAlive`) e último scan Syscollector (`scan.time`/campo equivalente validado), com fuso/UTC claro e origem/horário da consulta.
 - Usuário autorizado pode marcar/desmarcar “Ativo crítico” na ficha; a seleção é binária e persiste no PUS. A classificação aparece na lista/ficha e como contexto dos ativos impactados; não recebe pontuação nem cartão dedicado no dashboard.
 - O limiar EPSS editado pelo super admin fica isolado por tenant; salvar um novo valor atualiza totais, indicadores, ordenação do dashboard, lista e filtros desse tenant. KEV mantém precedência, EPSS ausente continua pendente, e tenants diferentes não compartilham a configuração.

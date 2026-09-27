@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function ResetPasswordForm() {
+export function ResetPasswordForm({ flow = "recovery" }: { flow?: "invite" | "recovery" }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -34,9 +34,14 @@ export function ResetPasswordForm() {
         setErrorMessage("Não foi possível atualizar a senha. Abra novamente o link recebido por e-mail.");
         return;
       }
-      await supabase.auth.signOut();
-      setMessage("Senha atualizada. Você já pode entrar com a nova credencial.");
-      window.setTimeout(() => router.replace("/login"), 1200);
+      if (flow === "invite") {
+        router.replace("/mfa/setup");
+        router.refresh();
+      } else {
+        await supabase.auth.signOut();
+        setMessage("Senha atualizada. Você já pode entrar com a nova credencial.");
+        window.setTimeout(() => router.replace("/login"), 1200);
+      }
     } catch {
       setErrorMessage("Não foi possível atualizar a senha. Abra novamente o link recebido por e-mail.");
     } finally {
@@ -56,7 +61,7 @@ export function ResetPasswordForm() {
         <label htmlFor="confirmation">Confirme a nova senha</label>
         <input id="confirmation" type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
       </div>
-      <button className="primary-button" type="submit" disabled={loading}>{loading ? "Salvando…" : "Atualizar senha"}</button>
+      <button className="primary-button" type="submit" disabled={loading}>{loading ? "Salvando…" : flow === "invite" ? "Definir senha" : "Atualizar senha"}</button>
       <div className="form-row"><Link className="text-link" href="/login">Voltar ao login</Link></div>
     </form>
   );

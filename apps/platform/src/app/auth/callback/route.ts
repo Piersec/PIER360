@@ -7,17 +7,16 @@ export async function GET(request: NextRequest) {
   const safePath = requestedPath === "/reset-password" ? "/reset-password" : "/dashboard";
 
   if (!code) {
+    const hasAuthError = request.nextUrl.searchParams.has("error") || request.nextUrl.searchParams.has("error_code");
+    if (!hasAuthError && requestedPath === "/dashboard") {
+      return NextResponse.redirect(new URL("/auth/accept-invite", request.url));
+    }
     return NextResponse.redirect(new URL("/auth/error", request.url));
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    return NextResponse.redirect(new URL("/auth/error", request.url));
-  }
-
-  const { error: activationError } = await supabase.rpc("pier360_activate_current_memberships");
-  if (activationError) {
     return NextResponse.redirect(new URL("/auth/error", request.url));
   }
 
