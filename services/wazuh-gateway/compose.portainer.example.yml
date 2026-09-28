@@ -56,13 +56,10 @@ services:
         target: /run/secrets/wazuh_indexer_ca.crt
         read_only: true
     networks:
-      - wazuh-manager
-      - cloudflared
+      - gateway-ingress
 
 networks:
-  wazuh-manager:
+  gateway-ingress:
     external: true
-    name: ${WAZUH_MANAGER_DOCKER_NETWORK:?Set the existing Docker network containing the Wazuh Manager}
-  cloudflared:
-    external: true
-    name: ${CLOUDFLARED_DOCKER_NETWORK:?Set the existing Docker network containing the Cloudflare Tunnel connector}
+    name: ${CLOUDFLARED_DOCKER_NETWORK:?Set the dedicated network shared only with the homologation Cloudflare Tunnel connector}
+
