@@ -42,6 +42,7 @@ export default async function DashboardPage() {
           {assetTenants.length ? <Link className="text-link" href={`/assets?tenant=${assetTenants[0].id}`}>Ativos</Link> : null}
           {vulnerabilityTenants.length ? <Link className="text-link" href={`/vulnerabilities?tenant=${vulnerabilityTenants[0].id}`}>Vulnerabilidades</Link> : null}
           {isSuperAdmin ? <Link className="text-link" href="/admin/users">Administração de usuários</Link> : null}
+          {isSuperAdmin ? <Link className="text-link" href="/admin/integrations/wazuh">Integrações Wazuh</Link> : null}
           <div className="account-chip">{email}</div>
         </div>
       </header>
