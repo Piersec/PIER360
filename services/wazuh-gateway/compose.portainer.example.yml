@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     image: pier360-wazuh-gateway:dev
     pull_policy: build
+    entrypoint: ["node", "server.mjs"]
     restart: unless-stopped
     read_only: true
     security_opt:
