@@ -27,6 +27,8 @@ services:
       WAZUH_GATEWAY_SERVICE_TOKEN_FILE: /run/secrets/wazuh_gateway_service_token
       WAZUH_MANAGER_CA_FILE: /run/secrets/wazuh_manager_ca.crt
       WAZUH_INDEXER_CA_FILE: /run/secrets/wazuh_indexer_ca.crt
+    extra_hosts:
+      - "wazuh-indexer:${WAZUH_INDEXER_HOST_IP:?Set WAZUH_INDEXER_HOST_IP}"
     volumes:
       - type: bind
         source: ${WAZUH_MANAGER_PASSWORD_FILE:?Set the host path to the read-only Manager password file}
