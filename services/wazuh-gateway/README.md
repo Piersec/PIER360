@@ -26,13 +26,13 @@ Variáveis obrigatórias:
 - `WAZUH_GATEWAY_SERVICE_TOKEN` ou `WAZUH_GATEWAY_SERVICE_TOKEN_FILE`: segredo aleatório compartilhado somente com o Vercel Preview.
 - `WAZUH_CONNECTION_KEY`: chave opaca cadastrada na linha `wazuh_connections` do tenant (DEV: `piersec-dev`).
 - `WAZUH_MANAGER_URL`: URL HTTPS alcançável pelo container; no DEV, use o IP/hostname privado do host com a porta `55000`. Não inclua usuário, senha nem query.
-- `WAZUH_MANAGER_USERNAME` / `WAZUH_MANAGER_PASSWORD` ou suas variantes `_FILE`: credenciais do usuário Manager read-only (`agent:read` e `syscollector:read`).
+- `WAZUH_MANAGER_USERNAME`: nome do usuário Manager read-only (`agent:read` e `syscollector:read`). `WAZUH_MANAGER_PASSWORD_FILE`: senha em arquivo montado como read-only.
 - `WAZUH_MANAGER_CA_FILE`: caminho do certificado CA confiável montado dentro do container quando o Manager usa certificado privado.
 - `WAZUH_INDEXER_URL`: URL HTTPS do Indexer alcançável pelo container; no DEV, use o IP/hostname privado do host com a porta `9200`.
-- `WAZUH_INDEXER_USERNAME` / `WAZUH_INDEXER_PASSWORD` ou suas variantes `_FILE`: credenciais de uma identidade separada com leitura/search apenas nos índices necessários. Não reutilize o usuário do Manager.
+- `WAZUH_INDEXER_USERNAME`: nome de uma identidade separada com leitura/search apenas nos índices necessários. `WAZUH_INDEXER_PASSWORD_FILE`: senha em arquivo montado como read-only. Não reutilize o usuário do Manager.
 - `WAZUH_INDEXER_CA_FILE`: caminho do certificado CA confiável montado dentro do container quando o Indexer usa certificado privado. O gateway nunca desliga a validação TLS.
 
-Use arquivos montados como read-only no Docker/Portainer para as credenciais e tokens. Não coloque secrets no repositório, no `.env.example`, em imagem Docker, no navegador ou no Supabase. Restrinja acesso de administradores a esses arquivos e faça rotação se forem expostos. Se Manager e Indexer forem assinados pela mesma CA, o mesmo arquivo PEM pode ser montado nos dois caminhos de CA.
+Use arquivos montados como read-only no Docker/Portainer para senhas e tokens; os nomes dos usuários não são segredos e ficam como variáveis do Stack. Não coloque secrets no repositório, no `.env.example`, em imagem Docker, no navegador ou no Supabase. Restrinja acesso de administradores a esses arquivos e faça rotação se forem expostos. Se Manager e Indexer forem assinados pela mesma CA, o mesmo arquivo PEM pode ser montado nos dois caminhos de CA.
 
 ## Executar para desenvolvimento
 
@@ -46,7 +46,7 @@ No container, injete as variáveis de ambiente e monte os três arquivos de segr
 
 `compose.portainer.example.yml` é um modelo de Stack para importar junto com esta pasta do repositório. O Stack exige `WAZUH_MANAGER_URL`, `WAZUH_INDEXER_URL`, `CLOUDFLARED_DOCKER_NETWORK` e os caminhos absolutos no host para os arquivos de segredo e CA. Como as APIs Wazuh rodam no host em DEV, não é necessário conectar o gateway a uma rede de containers Wazuh. O host precisa aceitar conexões da rede Docker do gateway às portas `55000` e `9200`, e seus certificados precisam validar para os hostnames usados. Este modelo não publica `8787` na interface do host.
 
-Crie cinco arquivos de segredo no host da VM, fora da pasta do repositório: usuário e senha do Manager, usuário e senha do Indexer e token de serviço. Crie também os arquivos PEM da CA que assina o TLS do Manager e do Indexer; podem ser o mesmo arquivo se ambos usarem a mesma CA. Conceda leitura ao UID/GID `1000:1000` do container (`node`).
+Crie três arquivos de segredo no host da VM, fora da pasta do repositório: senha do Manager, senha do Indexer e token de serviço. Crie também os arquivos PEM da CA que assina o TLS do Manager e do Indexer; podem ser o mesmo arquivo se ambos usarem a mesma CA. Conceda leitura ao UID/GID `1000:1000` do container (`node`).
 
 No Portainer, crie a rede Bridge `pier360-gateway-ingress`. Atualize somente o stack `cloudflared-homologacao` para também se conectar a essa rede, mantendo sua rede atual. Configure `CLOUDFLARED_DOCKER_NETWORK=pier360-gateway-ingress` no stack do gateway. Assim, os demais serviços que usam a rede ampla atual não ficam diretamente conectados ao gateway. Antes de habilitar o hostname, confirme que o gateway consegue alcançar o IP/hostname privado do host nas portas `55000` e `9200`; não abra essas portas para a internet.
 
