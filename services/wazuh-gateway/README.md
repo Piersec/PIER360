@@ -28,7 +28,8 @@ Variáveis obrigatórias:
 - `WAZUH_MANAGER_URL`: URL HTTPS alcançável pelo container; no DEV, use o IP/hostname privado do host com a porta `55000`. Não inclua usuário, senha nem query.
 - `WAZUH_MANAGER_USERNAME`: nome do usuário Manager read-only (`agent:read` e `syscollector:read`). `WAZUH_MANAGER_PASSWORD_FILE`: senha em arquivo montado como read-only.
 - `WAZUH_MANAGER_CA_FILE`: caminho do certificado CA confiável montado dentro do container quando o Manager usa certificado privado.
-- `WAZUH_INDEXER_URL`: URL HTTPS do Indexer alcançável pelo container; no DEV, use o IP/hostname privado do host com a porta `9200`.
+- `WAZUH_INDEXER_URL`: URL HTTPS do Indexer alcançável pelo container. No DEV atual, use `https://wazuh-indexer:9200`: o nome corresponde ao SAN do certificado instalado e é resolvido para o IP privado do host pelo `extra_hosts` do Stack.
+- `WAZUH_INDEXER_HOST_IP`: IP privado do host Wazuh que o alias `wazuh-indexer` deve resolver dentro do container (defina o IP privado atual do host Wazuh).
 - `WAZUH_INDEXER_USERNAME`: nome de uma identidade separada com leitura/search apenas nos índices necessários. `WAZUH_INDEXER_PASSWORD_FILE`: senha em arquivo montado como read-only. Não reutilize o usuário do Manager.
 - `WAZUH_INDEXER_CA_FILE`: caminho do certificado CA confiável montado dentro do container quando o Indexer usa certificado privado. O gateway nunca desliga a validação TLS.
 
@@ -44,9 +45,11 @@ No container, injete as variáveis de ambiente e monte os três arquivos de segr
 
 ### Portainer
 
-`compose.portainer.example.yml` é um modelo de Stack para importar junto com esta pasta do repositório. O Stack exige `WAZUH_MANAGER_URL`, `WAZUH_INDEXER_URL`, `CLOUDFLARED_DOCKER_NETWORK` e os caminhos absolutos no host para os arquivos de segredo e CA. Como as APIs Wazuh rodam no host em DEV, não é necessário conectar o gateway a uma rede de containers Wazuh. O host precisa aceitar conexões da rede Docker do gateway às portas `55000` e `9200`, e seus certificados precisam validar para os hostnames usados. Este modelo não publica `8787` na interface do host.
+`compose.portainer.example.yml` é um modelo de Stack para importar junto com esta pasta do repositório. O Stack exige `WAZUH_MANAGER_URL`, `WAZUH_INDEXER_URL`, `WAZUH_INDEXER_HOST_IP`, `CLOUDFLARED_DOCKER_NETWORK` e os caminhos absolutos no host para os arquivos de segredo e CA. Como as APIs Wazuh rodam no host em DEV, não é necessário conectar o gateway a uma rede de containers Wazuh. O host precisa aceitar conexões da rede Docker do gateway às portas `55000` e `9200`, e seus certificados precisam validar para os hostnames usados. Este modelo não publica `8787` na interface do host.
 
 Crie três arquivos de segredo no host da VM, fora da pasta do repositório: senha do Manager, senha do Indexer e token de serviço. Crie também os arquivos PEM da CA que assina o TLS do Manager e do Indexer; podem ser o mesmo arquivo se ambos usarem a mesma CA. Conceda leitura ao UID/GID `1000:1000` do container (`node`).
+
+No host Wazuh, instale a CA pública do Indexer no caminho de segredo do gateway com `sudo install -o 1000 -g 1000 -m 400 /etc/wazuh-indexer/certs/root-ca.pem /opt/pier360/wazuh-gateway/secrets/wazuh_indexer_ca.crt`. No Portainer, defina `WAZUH_INDEXER_URL=https://wazuh-indexer:9200`, `WAZUH_INDEXER_HOST_IP=<IP privado do host>` e `WAZUH_INDEXER_CA_HOST_FILE=/opt/pier360/wazuh-gateway/secrets/wazuh_indexer_ca.crt`. O Manager permanece em `https://192.168.15.9:55000`, com a CA configurada em `WAZUH_MANAGER_CA_HOST_FILE`.
 
 No Portainer, crie a rede Bridge `pier360-gateway-ingress`. Atualize somente o stack `cloudflared-homologacao` para também se conectar a essa rede, mantendo sua rede atual. Configure `CLOUDFLARED_DOCKER_NETWORK=pier360-gateway-ingress` no stack do gateway. Assim, os demais serviços que usam a rede ampla atual não ficam diretamente conectados ao gateway. Antes de habilitar o hostname, confirme que o gateway consegue alcançar o IP/hostname privado do host nas portas `55000` e `9200`; não abra essas portas para a internet.
 
