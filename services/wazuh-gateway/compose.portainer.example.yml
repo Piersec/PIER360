@@ -1,0 +1,59 @@
+services:
+  wazuh-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pier360-wazuh-gateway:dev
+    pull_policy: build
+    entrypoint: ["node", "server.mjs"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    expose:
+      - "8787"
+    environment:
+      PORT: "8787"
+      WAZUH_CONNECTION_KEY: ${WAZUH_CONNECTION_KEY:-piersec-dev}
+      WAZUH_MANAGER_URL: ${WAZUH_MANAGER_URL:?Set WAZUH_MANAGER_URL}
+      WAZUH_MANAGER_USERNAME: ${WAZUH_MANAGER_USERNAME:?Set the read-only Manager username}
+      WAZUH_MANAGER_PASSWORD_FILE: /run/secrets/wazuh_manager_password
+      WAZUH_INDEXER_URL: ${WAZUH_INDEXER_URL:?Set WAZUH_INDEXER_URL}
+      WAZUH_INDEXER_USERNAME: ${WAZUH_INDEXER_USERNAME:?Set the read-only Indexer username}
+      WAZUH_INDEXER_PASSWORD_FILE: /run/secrets/wazuh_indexer_password
+      WAZUH_GATEWAY_SERVICE_TOKEN_FILE: /run/secrets/wazuh_gateway_service_token
+      WAZUH_MANAGER_CA_FILE: /run/secrets/wazuh_manager_ca.crt
+      WAZUH_INDEXER_CA_FILE: /run/secrets/wazuh_indexer_ca.crt
+    extra_hosts:
+      - "wazuh-indexer:${WAZUH_INDEXER_HOST_IP:?Set WAZUH_INDEXER_HOST_IP}"
+    volumes:
+      - type: bind
+        source: ${WAZUH_MANAGER_PASSWORD_FILE:?Set the host path to the read-only Manager password file}
+        target: /run/secrets/wazuh_manager_password
+        read_only: true
+      - type: bind
+        source: ${WAZUH_INDEXER_PASSWORD_FILE:?Set the host path to the read-only Indexer password file}
+        target: /run/secrets/wazuh_indexer_password
+        read_only: true
+      - type: bind
+        source: ${WAZUH_GATEWAY_SERVICE_TOKEN_FILE:?Set the host path to the gateway bearer token file}
+        target: /run/secrets/wazuh_gateway_service_token
+        read_only: true
+      - type: bind
+        source: ${WAZUH_MANAGER_CA_HOST_FILE:?Set the host path to the Manager CA PEM file}
+        target: /run/secrets/wazuh_manager_ca.crt
+        read_only: true
+      - type: bind
+        source: ${WAZUH_INDEXER_CA_HOST_FILE:?Set the host path to the Indexer CA PEM file}
+        target: /run/secrets/wazuh_indexer_ca.crt
+        read_only: true
+    networks:
+      - gateway-ingress
+
+networks:
+  gateway-ingress:
+    external: true
+    name: ${CLOUDFLARED_DOCKER_NETWORK:?Set the dedicated network shared only with the homologation Cloudflare Tunnel connector}
+

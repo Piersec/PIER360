@@ -30,7 +30,7 @@ O browser nunca acessa Manager API (55000) ou Indexer API (9200). Para manter co
 ### Fluxo de dados
 
 1. O usuário autentica e o BFF resolve tenant/conexão e permissões no servidor. O browser nunca escolhe conexão ou cluster fora desse escopo.
-2. A cada consulta de agente, o BFF chama o gateway, que usa `GET /agents/summary/status`, `GET /agents` e, quando necessário, `GET /syscollector/{agent_id}/packages` com seleção/paginação seguras.
+2. A cada consulta de agente, o BFF chama o gateway, que usa `GET /agents/summary` para contagens, `GET /agents` para lista/ficha e, somente ao abrir a ficha, `GET /syscollector/{agent_id}/packages` com seleção segura de `scan.time`. `GET /agents/summary/status` não é o endpoint dos cartões de distribuição.
 3. A cada consulta de vulnerabilidade, o gateway executa no Indexer uma busca/aggregation limitada no índice `wazuh-states-vulnerabilities-*`; o BFF acrescenta overlay operacional de workflow do Supabase para os IDs retornados.
 4. Dashboard, lista e detalhe usam a mesma fonte e filtros sem carregar todo o índice no cliente. Paginação/aggregations ocorrem no Indexer; a resposta informa hora da consulta e erro/timeout/shard parcial.
 5. A resposta ao vivo não é persistida como snapshot no Supabase. Metadados mínimos de execução (duração, resultado, quantidade, erro sanitizado) podem ser registrados para operação, sem payload de finding.

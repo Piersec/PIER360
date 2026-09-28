@@ -409,6 +409,17 @@ export type Database = {
         Args: { target_tenant_id: string }
         Returns: boolean
       }
+      pier360_grant_member_tenants: {
+        Args: {
+          target_full_name?: string | null
+          target_membership_role: string
+          target_module_capability?: string
+          target_module_keys: string[]
+          target_tenant_ids: string[]
+          target_user_id: string
+        }
+        Returns: undefined
+      }
       pier360_provision_tenant_member: {
         Args: {
           target_full_name: string
